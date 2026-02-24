@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JARVIS FREE AI</title>
+    <style>
+        body { background-color: #000; color: #00d4ff; font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; text-align: center; }
+        .arc-reactor { width: 120px; height: 120px; border-radius: 50%; border: 4px solid #00d4ff; box-shadow: 0 0 15px #00d4ff; margin: 0 auto 30px; display: flex; justify-content: center; align-items: center; }
+        .listening { animation: pulse 1.5s infinite; box-shadow: 0 0 40px #00d4ff; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+        #transcriptText { color: #aaa; margin-bottom: 30px; padding: 0 15px; min-height: 40px; }
+        button { background: transparent; border: 1px solid #00d4ff; color: #00d4ff; padding: 15px 40px; border-radius: 50px; cursor: pointer; text-transform: uppercase; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="arc-reactor" id="orb"></div>
+        <h1 id="status">JARVIS FREE</h1>
+        <p id="transcriptText">Awaiting command, sir.</p>
+        <button id="startBtn">Click to Talk</button>
+    </div>
+
+    <script>
+        const startBtn = document.getElementById('startBtn');
+        const status = document.getElementById('status');
+        const orb = document.getElementById('orb');
+        const transcriptText = document.getElementById('transcriptText');
+
+        // YAHAN APNI GEMINI API KEY DAALEIN
+        const API_KEY = "AIzaSyB0khR2_xObTShHGNdUb_6bwZL4fpdfcnQ"; 
+
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        
+        if (!SpeechRecognition) {
+            alert("Browser not supported. Use Chrome.");
+        } else {
+            const recognition = new SpeechRecognition();
+
+            startBtn.addEventListener('click', () => {
+                recognition.start();
+                status.innerText = "Listening...";
+                orb.classList.add('listening');
+            });
+
+            recognition.onresult = async (event) => {
+                const userText = event.results[0][0].transcript;
+                transcriptText.innerText = "You: " + userText;
+                orb.classList.remove('listening');
+                status.innerText = "Thinking...";
+                
+                await askGemini(userText);
+            };
+
+            async function askGemini(query) {
+                // Gemini API ka endpoint
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
+                
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{ 
+                                parts: [{ text: "You are Jarvis from Iron Man. Be concise, witty, and call the user 'sir'. Answer this: " + query }] 
+                            }]
+                        })
+                    });
+
+                    const data = await response.json();
+                    const aiReply = data.candidates[0].content.parts[0].text;
+                    speak(aiReply);
+                } catch (error) {
+                    console.error(error);
+                    speak("I am having trouble connecting, sir. Check your API key.");
+                }
+            }
+
+            function speak(text) {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.rate = 1.0;
+                utterance.pitch = 0.8;
+                
+                // Try to find a male voice
+                const voices = window.speechSynthesis.getVoices();
+                const maleVoice = voices.find(v => v.name.includes('Male') || v.name.includes('UK English'));
+                if (maleVoice) utterance.voice = maleVoice;
+
+                window.speechSynthesis.speak(utterance);
+                status.innerText = "JARVIS";
+                transcriptText.innerText = text;
+            }
+        }
+    </script>
+</body>
+</html>
